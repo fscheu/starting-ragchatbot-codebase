@@ -1,23 +1,25 @@
 """Shared test fixtures and configuration for pytest"""
-import sys
+
 import os
-import pytest
-from unittest.mock import Mock, MagicMock, patch
+import sys
 from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 
 # Add backend directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from models import Course, Lesson, CourseChunk
-from vector_store import VectorStore, SearchResults
-from search_tools import CourseSearchTool, CourseOutlineTool, ToolManager
 from ai_generator import AIGenerator
-from rag_system import RAGSystem
 from config import Config
+from models import Course, CourseChunk, Lesson
+from rag_system import RAGSystem
+from search_tools import CourseOutlineTool, CourseSearchTool, ToolManager
 from session_manager import SessionManager
-
+from vector_store import SearchResults, VectorStore
 
 # ============ Fixture Data ============
+
 
 @pytest.fixture
 def sample_course():
@@ -30,19 +32,19 @@ def sample_course():
             Lesson(
                 lesson_number=0,
                 title="Introduction to ML",
-                lesson_link="https://example.com/ml-course/lesson-0"
+                lesson_link="https://example.com/ml-course/lesson-0",
             ),
             Lesson(
                 lesson_number=1,
                 title="Supervised Learning Basics",
-                lesson_link="https://example.com/ml-course/lesson-1"
+                lesson_link="https://example.com/ml-course/lesson-1",
             ),
             Lesson(
                 lesson_number=2,
                 title="Unsupervised Learning Methods",
-                lesson_link="https://example.com/ml-course/lesson-2"
-            )
-        ]
+                lesson_link="https://example.com/ml-course/lesson-2",
+            ),
+        ],
     )
 
 
@@ -54,20 +56,20 @@ def sample_chunks(sample_course):
             content="Lesson 0 content: Machine learning is a subset of artificial intelligence.",
             course_title=sample_course.title,
             lesson_number=0,
-            chunk_index=0
+            chunk_index=0,
         ),
         CourseChunk(
             content="Machine learning has applications in various fields including computer vision.",
             course_title=sample_course.title,
             lesson_number=0,
-            chunk_index=1
+            chunk_index=1,
         ),
         CourseChunk(
             content="Supervised learning is one of the most common types of machine learning.",
             course_title=sample_course.title,
             lesson_number=1,
-            chunk_index=2
-        )
+            chunk_index=2,
+        ),
     ]
 
 
@@ -77,23 +79,18 @@ def sample_search_results():
     return SearchResults(
         documents=[
             "Machine learning is a subset of artificial intelligence.",
-            "Supervised learning is one of the most common types."
+            "Supervised learning is one of the most common types.",
         ],
         metadata=[
-            {
-                "course_title": "Introduction to Machine Learning",
-                "lesson_number": 0
-            },
-            {
-                "course_title": "Introduction to Machine Learning",
-                "lesson_number": 1
-            }
+            {"course_title": "Introduction to Machine Learning", "lesson_number": 0},
+            {"course_title": "Introduction to Machine Learning", "lesson_number": 1},
         ],
-        distances=[0.15, 0.23]
+        distances=[0.15, 0.23],
     )
 
 
 # ============ Mock Components ============
+
 
 @pytest.fixture
 def mock_vector_store(sample_search_results):
@@ -106,13 +103,15 @@ def mock_vector_store(sample_search_results):
     # Mock course catalog get method
     mock_store.course_catalog = Mock()
     mock_store.course_catalog.get.return_value = {
-        'metadatas': [{
-            'title': 'Introduction to Machine Learning',
-            'course_link': 'https://example.com/ml-course',
-            'instructor': 'Dr. Jane Smith',
-            'lessons_json': '[{"lesson_number": 0, "lesson_title": "Introduction to ML", "lesson_link": "https://example.com/ml-course/lesson-0"}]',
-            'lesson_count': 3
-        }]
+        "metadatas": [
+            {
+                "title": "Introduction to Machine Learning",
+                "course_link": "https://example.com/ml-course",
+                "instructor": "Dr. Jane Smith",
+                "lessons_json": '[{"lesson_number": 0, "lesson_title": "Introduction to ML", "lesson_link": "https://example.com/ml-course/lesson-0"}]',
+                "lesson_count": 3,
+            }
+        ]
     }
 
     return mock_store
@@ -140,7 +139,9 @@ def mock_anthropic_client():
 
     # Create mock final response after tool use
     mock_final_response = Mock()
-    mock_final_response.content = [Mock(text="Based on the course materials, machine learning is...")]
+    mock_final_response.content = [
+        Mock(text="Based on the course materials, machine learning is...")
+    ]
     mock_final_response.stop_reason = "end_turn"
 
     # Configure mock to return different responses
@@ -160,11 +161,12 @@ def test_config():
         CHUNK_OVERLAP=100,
         MAX_RESULTS=5,
         MAX_HISTORY=2,
-        CHROMA_PATH="./test_chroma_db"
+        CHROMA_PATH="./test_chroma_db",
     )
 
 
 # ============ Component Fixtures ============
+
 
 @pytest.fixture
 def course_search_tool(mock_vector_store):
@@ -203,6 +205,7 @@ def session_manager():
 
 # ============ File Path Fixtures ============
 
+
 @pytest.fixture
 def sample_course_file():
     """Path to sample course fixture file"""
@@ -211,6 +214,7 @@ def sample_course_file():
 
 # ============ Cleanup Fixtures ============
 
+
 @pytest.fixture(autouse=True)
 def cleanup_test_db():
     """Clean up test database after each test"""
@@ -218,4 +222,5 @@ def cleanup_test_db():
     test_db_path = Path("./test_chroma_db")
     if test_db_path.exists():
         import shutil
+
         shutil.rmtree(test_db_path, ignore_errors=True)

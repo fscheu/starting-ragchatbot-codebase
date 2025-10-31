@@ -1,8 +1,10 @@
 """Integration tests for RAG system"""
+
+from unittest.mock import MagicMock, Mock, patch
+
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from rag_system import RAGSystem
 from config import Config
+from rag_system import RAGSystem
 
 
 class TestRAGSystemContentQueries:
@@ -11,9 +13,11 @@ class TestRAGSystemContentQueries:
     def test_content_query_flow(self, test_config):
         """Test end-to-end content query flow"""
         # Create RAG system with mocked components
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             # Configure mocks
             mock_store = MockVectorStore.return_value
@@ -22,17 +26,21 @@ class TestRAGSystemContentQueries:
                 metadata=[{"course_title": "ML Course", "lesson_number": 0}],
                 distances=[0.1],
                 error=None,
-                is_empty=Mock(return_value=False)
+                is_empty=Mock(return_value=False),
             )
             mock_store._resolve_course_name.return_value = "ML Course"
             mock_store.get_lesson_link.return_value = "https://example.com/lesson-0"
 
             mock_ai = MockAIGenerator.return_value
-            mock_ai.generate_response.return_value = "Machine learning is a subset of AI..."
+            mock_ai.generate_response.return_value = (
+                "Machine learning is a subset of AI..."
+            )
 
             # Create system and execute query
             rag = RAGSystem(test_config)
-            answer, sources = rag.query("What is machine learning?", session_id="test_1")
+            answer, sources = rag.query(
+                "What is machine learning?", session_id="test_1"
+            )
 
             # Verify response
             assert isinstance(answer, str)
@@ -41,14 +49,16 @@ class TestRAGSystemContentQueries:
             # Verify AI generator was called with tools
             mock_ai.generate_response.assert_called_once()
             call_kwargs = mock_ai.generate_response.call_args[1]
-            assert 'tools' in call_kwargs
-            assert 'tool_manager' in call_kwargs
+            assert "tools" in call_kwargs
+            assert "tool_manager" in call_kwargs
 
     def test_content_query_with_sources(self, test_config):
         """Test that sources are returned correctly"""
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             # Configure mocks to simulate tool use
             mock_store = MockVectorStore.return_value
@@ -73,15 +83,19 @@ class TestRAGSystemContentQueries:
 
     def test_empty_results_handling(self, test_config):
         """Test handling when search returns no results"""
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_store = MockVectorStore.return_value
             mock_ai = MockAIGenerator.return_value
 
             # Configure AI to handle empty search
-            mock_ai.generate_response.return_value = "No relevant content found in the courses."
+            mock_ai.generate_response.return_value = (
+                "No relevant content found in the courses."
+            )
 
             rag = RAGSystem(test_config)
             answer, sources = rag.query("Nonexistent topic", session_id="test_3")
@@ -92,9 +106,11 @@ class TestRAGSystemContentQueries:
 
     def test_error_propagation(self, test_config):
         """Test error propagation through the stack"""
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAIGenerator, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAIGenerator,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAIGenerator.return_value
             mock_ai.generate_response.side_effect = Exception("API Error")
@@ -113,9 +129,11 @@ class TestRAGSystemSessionManagement:
 
     def test_session_management(self, test_config):
         """Test session creation and management"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Answer"
@@ -134,13 +152,15 @@ class TestRAGSystemSessionManagement:
 
             # Verify history was passed on second call
             second_call_kwargs = mock_ai.generate_response.call_args[1]
-            assert 'conversation_history' in second_call_kwargs
+            assert "conversation_history" in second_call_kwargs
 
     def test_conversation_context(self, test_config):
         """Test multi-turn conversation with context"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Answer"
@@ -158,15 +178,17 @@ class TestRAGSystemSessionManagement:
             second_call = mock_ai.generate_response.call_args_list[1]
             call_kwargs = second_call[1]
 
-            assert call_kwargs['conversation_history'] is not None
-            history = call_kwargs['conversation_history']
+            assert call_kwargs["conversation_history"] is not None
+            history = call_kwargs["conversation_history"]
             assert "What is supervised learning?" in history
 
     def test_concurrent_sessions(self, test_config):
         """Test handling multiple concurrent sessions"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Answer"
@@ -182,7 +204,9 @@ class TestRAGSystemSessionManagement:
             # Session A should have history, session B should be fresh
             assert rag.session_manager.sessions["session_A"] is not None
             assert rag.session_manager.sessions["session_B"] is not None
-            assert len(rag.session_manager.sessions["session_A"]) > len(rag.session_manager.sessions["session_B"])
+            assert len(rag.session_manager.sessions["session_A"]) > len(
+                rag.session_manager.sessions["session_B"]
+            )
 
 
 class TestRAGSystemToolIntegration:
@@ -190,9 +214,11 @@ class TestRAGSystemToolIntegration:
 
     def test_tool_manager_integration(self, test_config):
         """Test that tools are properly registered"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator'), \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator"),
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             rag = RAGSystem(test_config)
 
@@ -206,9 +232,11 @@ class TestRAGSystemToolIntegration:
 
     def test_outline_tool_integration(self, test_config):
         """Test course outline tool integration"""
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator'), \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator"),
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_store = MockVectorStore.return_value
 
@@ -221,9 +249,11 @@ class TestRAGSystemToolIntegration:
 
     def test_tool_execution_through_rag(self, test_config):
         """Test tool execution through RAG system"""
-        with patch('rag_system.VectorStore') as MockVectorStore, \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockVectorStore,
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_store = MockVectorStore.return_value
             mock_ai = MockAI.return_value
@@ -231,8 +261,8 @@ class TestRAGSystemToolIntegration:
             # Configure mock to simulate tool calling
             def mock_generate_with_tool(*args, **kwargs):
                 # Simulate tool execution
-                if 'tool_manager' in kwargs:
-                    tool_mgr = kwargs['tool_manager']
+                if "tool_manager" in kwargs:
+                    tool_mgr = kwargs["tool_manager"]
                     # Execute search tool
                     tool_mgr.execute_tool("search_course_content", query="test")
                 return "Answer using tool results"
@@ -251,12 +281,16 @@ class TestRAGSystemQueryTypes:
 
     def test_general_knowledge_query(self, test_config):
         """Test query that doesn't require course search"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
-            mock_ai.generate_response.return_value = "General knowledge answer without using tools"
+            mock_ai.generate_response.return_value = (
+                "General knowledge answer without using tools"
+            )
 
             rag = RAGSystem(test_config)
             answer, sources = rag.query("What is 2+2?", session_id="general_test")
@@ -268,20 +302,22 @@ class TestRAGSystemQueryTypes:
 
     def test_course_specific_query(self, test_config):
         """Test query requiring course content"""
-        with patch('rag_system.VectorStore') as MockStore, \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockStore,
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_store = MockStore.return_value
             mock_ai = MockAI.return_value
 
             # Simulate tool use by AI
             def mock_tool_usage(*args, **kwargs):
-                if 'tool_manager' in kwargs:
+                if "tool_manager" in kwargs:
                     # Populate sources through tool
-                    kwargs['tool_manager'].tools['search_course_content'].last_sources = [
-                        {"text": "Source", "link": "http://link"}
-                    ]
+                    kwargs["tool_manager"].tools[
+                        "search_course_content"
+                    ].last_sources = [{"text": "Source", "link": "http://link"}]
                 return "Course-specific answer"
 
             mock_ai.generate_response.side_effect = mock_tool_usage
@@ -289,7 +325,7 @@ class TestRAGSystemQueryTypes:
             rag = RAGSystem(test_config)
             answer, sources = rag.query(
                 "What is supervised learning in the ML course?",
-                session_id="course_test"
+                session_id="course_test",
             )
 
             # Should have used tool and returned sources
@@ -297,9 +333,11 @@ class TestRAGSystemQueryTypes:
 
     def test_outline_query(self, test_config):
         """Test course outline query"""
-        with patch('rag_system.VectorStore') as MockStore, \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore") as MockStore,
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_store = MockStore.return_value
             mock_ai = MockAI.return_value
@@ -308,20 +346,21 @@ class TestRAGSystemQueryTypes:
             mock_store._resolve_course_name.return_value = "ML Course"
             mock_store.course_catalog = Mock()
             mock_store.course_catalog.get.return_value = {
-                'metadatas': [{
-                    'title': 'ML Course',
-                    'course_link': 'http://link',
-                    'instructor': 'Teacher',
-                    'lessons_json': '[{"lesson_number": 0, "lesson_title": "Intro", "lesson_link": "http://lesson"}]'
-                }]
+                "metadatas": [
+                    {
+                        "title": "ML Course",
+                        "course_link": "http://link",
+                        "instructor": "Teacher",
+                        "lessons_json": '[{"lesson_number": 0, "lesson_title": "Intro", "lesson_link": "http://lesson"}]',
+                    }
+                ]
             }
 
             mock_ai.generate_response.return_value = "Course outline response"
 
             rag = RAGSystem(test_config)
             answer, sources = rag.query(
-                "What are the lessons in ML course?",
-                session_id="outline_test"
+                "What are the lessons in ML course?", session_id="outline_test"
             )
 
             # Should return answer
@@ -333,9 +372,11 @@ class TestRAGSystemEdgeCases:
 
     def test_query_without_session_id(self, test_config):
         """Test query without providing session ID"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Answer"
@@ -348,9 +389,11 @@ class TestRAGSystemEdgeCases:
 
     def test_empty_query(self, test_config):
         """Test handling of empty query"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Please provide a question"
@@ -363,9 +406,11 @@ class TestRAGSystemEdgeCases:
 
     def test_very_long_query(self, test_config):
         """Test handling of very long query"""
-        with patch('rag_system.VectorStore'), \
-             patch('rag_system.AIGenerator') as MockAI, \
-             patch('rag_system.DocumentProcessor'):
+        with (
+            patch("rag_system.VectorStore"),
+            patch("rag_system.AIGenerator") as MockAI,
+            patch("rag_system.DocumentProcessor"),
+        ):
 
             mock_ai = MockAI.return_value
             mock_ai.generate_response.return_value = "Answer to long query"

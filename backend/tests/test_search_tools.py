@@ -1,6 +1,8 @@
 """Unit tests for CourseSearchTool"""
-import pytest
+
 from unittest.mock import Mock, patch
+
+import pytest
 from search_tools import CourseSearchTool, ToolManager
 from vector_store import SearchResults
 
@@ -8,16 +10,16 @@ from vector_store import SearchResults
 class TestCourseSearchToolExecute:
     """Tests for CourseSearchTool.execute() method"""
 
-    def test_execute_basic_search(self, course_search_tool, mock_vector_store, sample_search_results):
+    def test_execute_basic_search(
+        self, course_search_tool, mock_vector_store, sample_search_results
+    ):
         """Test basic search with query only"""
         # Execute search
         result = course_search_tool.execute(query="machine learning")
 
         # Verify vector store was called correctly
         mock_vector_store.search.assert_called_once_with(
-            query="machine learning",
-            course_name=None,
-            lesson_number=None
+            query="machine learning", course_name=None, lesson_number=None
         )
 
         # Verify result contains expected content
@@ -28,15 +30,14 @@ class TestCourseSearchToolExecute:
         """Test search with course name filter"""
         # Execute search with course filter
         result = course_search_tool.execute(
-            query="supervised learning",
-            course_name="Machine Learning"
+            query="supervised learning", course_name="Machine Learning"
         )
 
         # Verify vector store search was called with course filter
         mock_vector_store.search.assert_called_once_with(
             query="supervised learning",
             course_name="Machine Learning",
-            lesson_number=None
+            lesson_number=None,
         )
 
         # Should return formatted results
@@ -46,16 +47,11 @@ class TestCourseSearchToolExecute:
     def test_execute_with_lesson_filter(self, course_search_tool, mock_vector_store):
         """Test search with lesson number filter"""
         # Execute search with lesson filter
-        result = course_search_tool.execute(
-            query="introduction",
-            lesson_number=0
-        )
+        result = course_search_tool.execute(query="introduction", lesson_number=0)
 
         # Verify vector store search was called with lesson filter
         mock_vector_store.search.assert_called_once_with(
-            query="introduction",
-            course_name=None,
-            lesson_number=0
+            query="introduction", course_name=None, lesson_number=0
         )
 
         # Should return formatted results
@@ -65,16 +61,12 @@ class TestCourseSearchToolExecute:
         """Test search with both course name and lesson number filters"""
         # Execute search with both filters
         result = course_search_tool.execute(
-            query="algorithms",
-            course_name="ML Course",
-            lesson_number=1
+            query="algorithms", course_name="ML Course", lesson_number=1
         )
 
         # Verify both filters were passed to vector store
         mock_vector_store.search.assert_called_once_with(
-            query="algorithms",
-            course_name="ML Course",
-            lesson_number=1
+            query="algorithms", course_name="ML Course", lesson_number=1
         )
 
     def test_execute_no_results(self, course_search_tool, mock_vector_store):
@@ -89,7 +81,9 @@ class TestCourseSearchToolExecute:
         # Should return "No relevant content found" message
         assert "No relevant content found" in result
 
-    def test_execute_no_results_with_filters(self, course_search_tool, mock_vector_store):
+    def test_execute_no_results_with_filters(
+        self, course_search_tool, mock_vector_store
+    ):
         """Test search with filters that returns no results"""
         # Configure mock to return empty results
         empty_results = SearchResults(documents=[], metadata=[], distances=[])
@@ -97,9 +91,7 @@ class TestCourseSearchToolExecute:
 
         # Execute search with filters
         result = course_search_tool.execute(
-            query="topic",
-            course_name="Nonexistent Course",
-            lesson_number=99
+            query="topic", course_name="Nonexistent Course", lesson_number=99
         )
 
         # Should include filter information in message
@@ -115,8 +107,7 @@ class TestCourseSearchToolExecute:
 
         # Execute search
         result = course_search_tool.execute(
-            query="anything",
-            course_name="Invalid Course"
+            query="anything", course_name="Invalid Course"
         )
 
         # Should return error message
@@ -134,7 +125,9 @@ class TestCourseSearchToolExecute:
         # Should return error message
         assert "error" in result.lower() or "Search error" in result
 
-    def test_source_tracking(self, course_search_tool, mock_vector_store, sample_search_results):
+    def test_source_tracking(
+        self, course_search_tool, mock_vector_store, sample_search_results
+    ):
         """Test that sources are tracked correctly"""
         # Execute search
         result = course_search_tool.execute(query="machine learning")
@@ -148,7 +141,9 @@ class TestCourseSearchToolExecute:
         assert "link" in source
         assert "Introduction to Machine Learning" in source["text"]
 
-    def test_result_formatting(self, course_search_tool, mock_vector_store, sample_search_results):
+    def test_result_formatting(
+        self, course_search_tool, mock_vector_store, sample_search_results
+    ):
         """Test that results are formatted correctly"""
         # Execute search
         result = course_search_tool.execute(query="machine learning")
@@ -241,10 +236,7 @@ class TestToolManager:
     def test_execute_tool(self, tool_manager, mock_vector_store):
         """Test tool execution through manager"""
         # Execute tool via manager
-        result = tool_manager.execute_tool(
-            "search_course_content",
-            query="test query"
-        )
+        result = tool_manager.execute_tool("search_course_content", query="test query")
 
         # Should return string result
         assert isinstance(result, str)
