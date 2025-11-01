@@ -16,7 +16,15 @@
       "Bash(fi)",
       "Bash(.venv/Scripts/python.exe -m pip install:*)",
       "Bash(export UV_HTTP_TIMEOUT=600)",
-      "Bash(uv run pytest:*)"
+      "Bash(uv run pytest:*)",
+      "Bash(git worktree:*)",
+      "Bash(git merge:*)",
+      "Bash(git checkout:*)",
+      "Bash(uv lock:*)",
+      "Bash(git branch:*)",
+      "Bash(if [ -d \".trees\" ])",
+      "Bash(then rm -rf .trees)",
+      "Bash(else echo \".trees folder already removed\")"
     ],
     "deny": [],
     "ask": []
