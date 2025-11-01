@@ -224,3 +224,101 @@ def cleanup_test_db():
         import shutil
 
         shutil.rmtree(test_db_path, ignore_errors=True)
+
+
+# ============ API Testing Fixtures ============
+
+@pytest.fixture
+def test_app():
+    """Create a test FastAPI app without static file mounting"""
+    from fastapi import FastAPI, HTTPException
+    from fastapi.middleware.cors import CORSMiddleware
+    from pydantic import BaseModel
+    from typing import List, Optional
+
+    # Create fresh app instance
+    app = FastAPI(title="Course Materials RAG System - Test")
+
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    # Pydantic models for request/response
+    class QueryRequest(BaseModel):
+        """Request model for course queries"""
+        query: str
+        session_id: Optional[str] = None
+
+    class Source(BaseModel):
+        """Model for a source citation with optional link"""
+        text: str
+        link: Optional[str] = None
+
+    class QueryResponse(BaseModel):
+        """Response model for course queries"""
+        answer: str
+        sources: List[Source]
+        session_id: str
+
+    class CourseStats(BaseModel):
+        """Response model for course statistics"""
+        total_courses: int
+        course_titles: List[str]
+
+    # Create mock RAG system for testing
+    mock_rag = Mock(spec=RAGSystem)
+
+    @app.post("/api/query", response_model=QueryResponse)
+    async def query_documents(request: QueryRequest):
+        """Process a query and return response with sources"""
+        try:
+            # Create session if not provided
+            session_id = request.session_id or "test_session_1"
+
+            # Process query using mocked RAG system
+            answer, sources = mock_rag.query(request.query, session_id)
+
+            # Convert source dictionaries to Source objects
+            source_objects = [Source(**source) for source in sources]
+
+            return QueryResponse(
+                answer=answer,
+                sources=source_objects,
+                session_id=session_id
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    @app.get("/api/courses", response_model=CourseStats)
+    async def get_course_stats():
+        """Get course analytics and statistics"""
+        try:
+            analytics = mock_rag.get_course_analytics()
+            return CourseStats(
+                total_courses=analytics["total_courses"],
+                course_titles=analytics["course_titles"]
+            )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+
+    # Store mock for access in tests
+    app.state.mock_rag = mock_rag
+
+    return app
+
+
+@pytest.fixture
+async def test_client(test_app):
+    """Create async test client for API testing"""
+    from httpx import AsyncClient, ASGITransport
+
+    async with AsyncClient(
+        transport=ASGITransport(app=test_app),
+        base_url="http://test"
+    ) as client:
+        yield client
